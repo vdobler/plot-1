@@ -146,10 +146,29 @@ of pixels) and the font is small or if the labels are rotated at least 30°.
 Maybe a hint like "don't do more than 5 ticks" to DefaultTicks would be enough.
 
 
+Tics, Grid and Tic Labels
+-------------------------
 
+The current generation of a grid is done by the special plotter.Grid. This
+makes it impossible to turn on grids from package plot itself as this would
+create an import cycle.
 
+The convention of "unlabled ticks are minor ticks, labled ones are major ticks"
+is nice but inflexible: In a faceted plot you cannot have an inner axis with
+major ticks without labels.  The labels just occupy precious space in faceted
+plots.
 
+Having neither a grid nor ticks makes faceted plots ugly to unusable.
+ggplot2 doesn't user inner axis (neither ticks, nor labels) whcih works
+fine due to the gray background and the default grid.
 
+Adding a grid during plot creation (outside of package plot) doesn't work
+as the plotter.Grid relies on the ticks and a turned of axis has no ticks.
+
+Proposed solution: Decouple axis drawing from tick/label generation:
+Instead of a method HideX have a bool HideX per Axis. (Or even a bitset
+which would allow hiding major ticks, minor ticks, labels and the axis itself
+individualy).
 
 
 

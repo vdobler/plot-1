@@ -76,6 +76,22 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 		f.Plots[0][r].HideX()
 	}
 
+	// Determine width of y-axis, height of x-axis and facet borders.
+	va := verticalAxis{f.Plots[0][0].Y}
+	ywidth := va.size()
+	for r := 1; r < rows; r++ {
+		va := verticalAxis{f.Plots[0][r].Y}
+		if s := va.size(); s > ywidth {
+			ywidth = s
+		}
+	}
+	// TODO: xheight
+	// TODO: collabsheight and rowlabwidth
+	// TODO: fwidth = (total - ywidth - rowlabwidth) / cols
+	// TODO: fheight =  ...
+	// TODO: manualy draw the axes, then turn ALL axes of, then draw plots
+	// TODO: x and y label for axis (one, centered)
+
 	// Determine individual plot sizes. BUG: first column must be broader
 	// to allow y-axis, last column must be broader for facet label, first row
 	// must be higher for facet label, last row must be higher for x-axis.
