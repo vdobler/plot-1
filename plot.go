@@ -126,7 +126,7 @@ func New() (*Plot, error) {
 		Font:  titleFont,
 	}
 	p.AxisRange.AbsExpansion = 0
-	p.AxisRange.AbsExpansion = 0.05
+	p.AxisRange.RelExpansion = 0.05
 	return p, nil
 }
 
@@ -140,6 +140,7 @@ func New() (*Plot, error) {
 // When drawing the plot, Plotters are drawn in the
 // order in which they were added to the plot.
 func (p *Plot) Add(ps ...Plotter) {
+	// TODO: constriant autoscaling
 	for _, d := range ps {
 		if x, ok := d.(DataRanger); ok {
 			xmin, xmax, ymin, ymax := x.DataRange()
@@ -171,17 +172,15 @@ func (p *Plot) Draw(c draw.Canvas) {
 		c.Max.Y -= p.Title.Padding
 	}
 
-	p.trainAxis()
+	x, y := horizontalAxis{p.X}, verticalAxis{p.Y}
+	p.trainAxis(c.Crop(y.size(), x.size(), 0, 0))
+	x, y = horizontalAxis{p.X}, verticalAxis{p.Y}
+	ywidth, xheight := y.size(), x.size()
 
-	x := horizontalAxis{p.X}
-	y := verticalAxis{p.Y}
+	x.draw(c.Crop(ywidth, 0, 0, 0))
+	y.draw(c.Crop(0, xheight, 0, 0))
 
-	ywidth := y.size()
-	x.draw(padX(p, c.Crop(ywidth, 0, 0, 0)))
-	xheight := x.size()
-	y.draw(padY(p, c.Crop(0, xheight, 0, 0)))
-
-	dataC := padY(p, padX(p, c.Crop(ywidth, xheight, 0, 0)))
+	dataC := c.Crop(ywidth, xheight, 0, 0)
 	for _, data := range p.plotters {
 		data.Plot(dataC, p)
 	}
@@ -189,40 +188,71 @@ func (p *Plot) Draw(c draw.Canvas) {
 	p.Legend.draw(c.Crop(ywidth, 0, 0, 0).Crop(0, xheight, 0, 0))
 }
 
-func (p *Plot) trainAxis() {
+// trainAxis sanitizes the x and y axis and expands the range to allow drawing
+// all glyphs without clipping and adds the relative and absolute range expansion.
+func (p *Plot) trainAxis(c draw.Canvas) {
+	// TODO: expand to next tic
 	p.X.sanitizeRange()
 	p.Y.sanitizeRange()
 
+	ICX := func(lx vg.Length) float64 {
+		return float64((lx - c.Min.X) / (c.Max.X - c.Min.X))
+	}
+	ICY := func(ly vg.Length) float64 {
+		return float64((ly - c.Min.Y) / (c.Max.Y - c.Min.Y))
+	}
+
+	xmin, xmax := p.X.Min, p.X.Max
+	ymin, ymax := p.Y.Min, p.Y.Max
+	// fmt.Printf("Original  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
 	for _, d := range p.plotters {
-		gdr, ok := d.(GlyphBoxer)
+		gb, ok := d.(GlyphBoxer)
 		if !ok {
 			continue
 		}
-		glyphs := p.GlyphBoxes(p)
-		xmin, xmax, ymin, ymax, float64 = gdr.GlyphDataRange()
-		if xmin < p.X.Min {
-			p.X.Min = xmin
-		}
-		if ymin < p.Y.Min {
-			p.Y.Min = ymin
-		}
-		if xmax > p.X.Max {
-			p.X.Max = xmax
-		}
-		if ymax > p.Y.Max {
-			p.Y.Max = Ymax
-		}
-	}
+		glyphs := gb.GlyphBoxes(p)
 
+		l := leftMost(&c, glyphs)
+		lx := c.X(l.X) + l.Min.X
+		if lx < 0 {
+			xmin = p.X.InvNorm(ICX(lx))
+		}
+
+		r := rightMost(&c, glyphs)
+		rx := c.X(r.X) + r.Min.X + r.Size().X
+		if rx > 1 {
+			xmax = p.X.InvNorm(ICX(rx))
+		}
+
+		b := bottomMost(&c, glyphs)
+		by := c.Y(b.Y) + b.Min.Y
+		if by < 0 {
+			ymin = p.Y.InvNorm(ICY(by))
+		}
+
+		t := topMost(&c, glyphs)
+		ty := c.Y(t.Y) + t.Min.Y + t.Size().Y
+		if ty > 1 {
+			ymax = p.Y.InvNorm(ICY(ty))
+		}
+		// TODO: top and bottom
+	}
+	// fmt.Printf("GlyphCor  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
+
+	// TODO: Do rel expansion before glyph expansion too?
 	if p.AxisRange.RelExpansion > 0 {
-		dx := p.AxisRange.RelExpansion * (p.X.Max - p.X.Min)
-		dx := p.AxisRange.RelExpansion * (p.Y.Max - p.Y.Min)
-		p.X.Min -= dx
-		p.Y.Min -= dy
-		p.X.Max += dx
-		p.Y.Max += dy
+		dx := p.AxisRange.RelExpansion * (xmax - xmin)
+		dy := p.AxisRange.RelExpansion * (ymax - ymin)
+		xmin -= dx
+		ymin -= dy
+		xmax += dx
+		ymax += dy
 	}
+	// fmt.Printf("Expanded  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
+	// TODO: absolute expansion
 
+	p.X.Min, p.X.Max = xmin, xmax
+	p.Y.Min, p.Y.Max = ymin, ymax
 }
 
 // DataCanvas returns a new draw.Canvas that
@@ -233,11 +263,10 @@ func (p *Plot) DataCanvas(da draw.Canvas) draw.Canvas {
 		da.Max.Y -= p.Title.Height(p.Title.Text) - p.Title.Font.Extents().Descent
 		da.Max.Y -= p.Title.Padding
 	}
-	p.X.sanitizeRange()
-	x := horizontalAxis{p.X}
-	p.Y.sanitizeRange()
-	y := verticalAxis{p.Y}
-	return padY(p, padX(p, da.Crop(y.size(), x.size(), 0, 0)))
+	x, y := horizontalAxis{p.X}, verticalAxis{p.Y}
+	p.trainAxis(da.Crop(y.size(), x.size(), 0, 0))
+	x, y = horizontalAxis{p.X}, verticalAxis{p.Y}
+	return da.Crop(y.size(), x.size(), 0, 0)
 }
 
 // DrawGlyphBoxes draws red outlines around the plot's
@@ -248,30 +277,6 @@ func (p *Plot) DrawGlyphBoxes(c *draw.Canvas) {
 		b.Rectangle.Min.X += c.X(b.X)
 		b.Rectangle.Min.Y += c.Y(b.Y)
 		c.Stroke(b.Rectangle.Path())
-	}
-}
-
-// padX returns a draw.Canvas that is padded horizontally
-// so that glyphs will no be clipped.
-func padX(p *Plot, c draw.Canvas) draw.Canvas {
-	glyphs := p.GlyphBoxes(p)
-	l := leftMost(&c, glyphs)
-	xAxis := horizontalAxis{p.X}
-	glyphs = append(glyphs, xAxis.GlyphBoxes(p)...)
-	r := rightMost(&c, glyphs)
-
-	minx := c.Min.X - l.Min.X
-	maxx := c.Max.X - (r.Min.X + r.Size().X)
-	lx := vg.Length(l.X)
-	rx := vg.Length(r.X)
-	n := (lx*maxx - rx*minx) / (lx - rx)
-	m := ((lx-1)*maxx - rx*minx + minx) / (lx - rx)
-	return draw.Canvas{
-		Canvas: vg.Canvas(c),
-		Rectangle: draw.Rectangle{
-			Min: draw.Point{X: n, Y: c.Min.Y},
-			Max: draw.Point{X: m, Y: c.Max.Y},
-		},
 	}
 }
 
@@ -305,30 +310,6 @@ func leftMost(c *draw.Canvas, boxes []GlyphBox) GlyphBox {
 		}
 	}
 	return l
-}
-
-// padY returns a draw.Canvas that is padded vertically
-// so that glyphs will no be clipped.
-func padY(p *Plot, c draw.Canvas) draw.Canvas {
-	glyphs := p.GlyphBoxes(p)
-	b := bottomMost(&c, glyphs)
-	yAxis := verticalAxis{p.Y}
-	glyphs = append(glyphs, yAxis.GlyphBoxes(p)...)
-	t := topMost(&c, glyphs)
-
-	miny := c.Min.Y - b.Min.Y
-	maxy := c.Max.Y - (t.Min.Y + t.Size().Y)
-	by := vg.Length(b.Y)
-	ty := vg.Length(t.Y)
-	n := (by*maxy - ty*miny) / (by - ty)
-	m := ((by-1)*maxy - ty*miny + miny) / (by - ty)
-	return draw.Canvas{
-		Canvas: vg.Canvas(c),
-		Rectangle: draw.Rectangle{
-			Min: draw.Point{Y: n, X: c.Min.X},
-			Max: draw.Point{Y: m, X: c.Max.X},
-		},
-	}
 }
 
 // topMost returns the top-most GlyphBox.

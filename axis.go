@@ -29,6 +29,10 @@ type Normalizer interface {
 	// Normalize transforms a value x in the data coordinate system to
 	// the normalized coordinate system.
 	Normalize(min, max, x float64) float64
+
+	// InvNormalize transforms a normalized coordinate value nc back
+	// to a data coordinate.
+	InvNormalize(min, max, nc float64) float64
 }
 
 // An Axis represents either a horizontal or vertical
@@ -149,6 +153,10 @@ func (LinearScale) Normalize(min, max, x float64) float64 {
 	return (x - min) / (max - min)
 }
 
+func (LinearScale) InvNormalize(min, max, nc float64) float64 {
+	return nc*(max-min) + min
+}
+
 // LocScale can be used as the value of an Axis.Scale function to
 // set the axis to a log scale.
 type LogScale struct{}
@@ -160,12 +168,21 @@ func (LogScale) Normalize(min, max, x float64) float64 {
 	return (log(x) - logMin) / (log(max) - logMin)
 }
 
+func (LogScale) InvNormalize(min, max, nc float64) float64 {
+	panic("not implemented")
+}
+
 // Norm returns the value of x, given in the data coordinate
 // system, normalized to its distance as a fraction of the
 // range of this axis.  For example, if x is a.Min then the return
 // value is 0, and if x is a.Max then the return value is 1.
 func (a *Axis) Norm(x float64) float64 {
 	return a.Scale.Normalize(a.Min, a.Max, x)
+}
+
+// InvNorm is the inverse of Norm.
+func (a *Axis) InvNorm(x float64) float64 {
+	return a.Scale.InvNormalize(a.Min, a.Max, x)
 }
 
 // drawTicks returns true if the tick marks should be drawn.
