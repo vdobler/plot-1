@@ -101,8 +101,8 @@ Maybe the following would work:
     Either 5% on both sides or to next tick, or whatever
  2. See if all GlybBoxes fall into drawing area, if not:
  3. Estimate how much larger which range should be and repeat.
-As 3 may increase the range this might swithc to different tick spacings
-and thus to completely differen ranges.
+As 3 may increase the range this might switch to different tick spacings
+and thus to completely different ranges.
 Does this process converge? If yes fast enough?
 For linear scales this estimation should be perfectly fine, for log
 and polar this is just some math. Unfortunately this cannot be done with the

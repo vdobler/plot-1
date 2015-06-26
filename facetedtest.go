@@ -14,12 +14,15 @@ import (
 )
 
 func main() {
-	fp, err := plot.NewFacetedPlot([]string{"AB", "CD", "EF"}, []string{"31", "52"})
+	fp, err := plot.NewFacetedPlot([]string{"AB", "CD", "EF"}, []string{"Gamma", "Delta"})
 	if err != nil {
 		panic(err)
 	}
 	fp.SameX = true
 	fp.SameY = true
+	fp.Plots[0][0].Title.Text = "Example Faceted Plot"
+	fp.Plots[0][0].X.Label.Text = "X-Axis Label"
+	fp.Plots[0][0].Y.Label.Text = "Y-Axis Label"
 
 	pltr, _ := plotter.NewScatter(randomPoints(10))
 	fp.Add(0, 0, pltr)
@@ -35,7 +38,7 @@ func main() {
 	pltr, _ = plotter.NewScatter(randomPoints(5))
 	fp.Add(2, 1, pltr)
 
-	pngcanvas := vgimg.PngCanvas{Canvas: vgimg.New(10*vg.Inch, 8*vg.Inch)}
+	pngcanvas := vgimg.PngCanvas{Canvas: vgimg.New(8*vg.Inch, 6*vg.Inch)}
 	fp.Draw(draw.New(pngcanvas))
 	file, err := os.Create("faceted.png")
 	if err != nil {
