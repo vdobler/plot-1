@@ -64,6 +64,11 @@ type Plot struct {
 	// Legend is the plot's legend.
 	Legend Legend
 
+	AxisRange struct {
+		RelExpansion float64
+		AbsExpansion vg.Length
+	}
+
 	// plotters are drawn by calling their Plot method
 	// after the axes are drawn.
 	plotters []Plotter
@@ -83,6 +88,12 @@ type Plotter interface {
 type DataRanger interface {
 	// DataRange returns the range of X and Y values.
 	DataRange() (xmin, xmax, ymin, ymax float64)
+}
+
+// GlyphDataRanger wraps the GlyphDataRange method.
+type GlyphDataRanger interface {
+	// DataRange returns the range of X and Y values.
+	GlyphDataRange(c draw.Canvas) (xmin, xmax, ymin, ymax float64)
 }
 
 // New returns a new plot with some reasonable
@@ -114,6 +125,8 @@ func New() (*Plot, error) {
 		Color: color.Black,
 		Font:  titleFont,
 	}
+	p.AxisRange.AbsExpansion = 0
+	p.AxisRange.AbsExpansion = 0.05
 	return p, nil
 }
 
@@ -158,9 +171,9 @@ func (p *Plot) Draw(c draw.Canvas) {
 		c.Max.Y -= p.Title.Padding
 	}
 
-	p.X.sanitizeRange()
+	p.trainAxis()
+
 	x := horizontalAxis{p.X}
-	p.Y.sanitizeRange()
 	y := verticalAxis{p.Y}
 
 	ywidth := y.size()
@@ -174,6 +187,42 @@ func (p *Plot) Draw(c draw.Canvas) {
 	}
 
 	p.Legend.draw(c.Crop(ywidth, 0, 0, 0).Crop(0, xheight, 0, 0))
+}
+
+func (p *Plot) trainAxis() {
+	p.X.sanitizeRange()
+	p.Y.sanitizeRange()
+
+	for _, d := range p.plotters {
+		gdr, ok := d.(GlyphBoxer)
+		if !ok {
+			continue
+		}
+		glyphs := p.GlyphBoxes(p)
+		xmin, xmax, ymin, ymax, float64 = gdr.GlyphDataRange()
+		if xmin < p.X.Min {
+			p.X.Min = xmin
+		}
+		if ymin < p.Y.Min {
+			p.Y.Min = ymin
+		}
+		if xmax > p.X.Max {
+			p.X.Max = xmax
+		}
+		if ymax > p.Y.Max {
+			p.Y.Max = Ymax
+		}
+	}
+
+	if p.AxisRange.RelExpansion > 0 {
+		dx := p.AxisRange.RelExpansion * (p.X.Max - p.X.Min)
+		dx := p.AxisRange.RelExpansion * (p.Y.Max - p.Y.Min)
+		p.X.Min -= dx
+		p.Y.Min -= dy
+		p.X.Max += dx
+		p.Y.Max += dy
+	}
+
 }
 
 // DataCanvas returns a new draw.Canvas that
