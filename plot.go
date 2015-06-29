@@ -223,8 +223,6 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 		}
 		xmin, xmax := p.X.Min, p.X.Max
 		ymin, ymax := p.Y.Min, p.Y.Max
-		fmt.Printf("%d X-Range %.8f %.8f Y-Range %.8f:%.8f\n",
-			iteration, xmin, xmax, ymin, ymax)
 		glyphs := []GlyphBox{}
 		for _, d := range p.plotters {
 			gb, ok := d.(GlyphBoxer)
@@ -260,8 +258,8 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 		p.X.Min, p.X.Max = xmin, xmax
 		p.Y.Min, p.Y.Max = ymin, ymax
 	}
-	fmt.Printf("10 X-Range %.8f %.8f Y-Range %.8f %.8f\n",
-		p.X.Min, p.X.Max, p.Y.Min, p.Y.Max)
+
+	// TODO: handle constrained autoscaling.
 }
 
 // DataCanvas returns a new draw.Canvas that
