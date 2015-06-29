@@ -65,7 +65,14 @@ type Plot struct {
 	Legend Legend
 
 	AxisRange struct {
+		// RelExpansion is the expansion of the axis at each end
+		// relative to the actual data range of the axis.
+		// This expansion is done before expanding the axis to
+		// accomodate all glyphs and the AbsExpansion
 		RelExpansion float64
+
+		// AbsExpansion will exapnd the axis so that each glyph
+		// has at least AbsExpansion distance from the plot border.
 		AbsExpansion vg.Length
 	}
 
@@ -125,8 +132,8 @@ func New() (*Plot, error) {
 		Color: color.Black,
 		Font:  titleFont,
 	}
-	p.AxisRange.AbsExpansion = 0
 	p.AxisRange.RelExpansion = 0.05
+	p.AxisRange.AbsExpansion = 1 * vg.Millimeter
 	return p, nil
 }
 
@@ -140,7 +147,7 @@ func New() (*Plot, error) {
 // When drawing the plot, Plotters are drawn in the
 // order in which they were added to the plot.
 func (p *Plot) Add(ps ...Plotter) {
-	// TODO: constriant autoscaling
+	// TODO: constraint autoscaling
 	for _, d := range ps {
 		if x, ok := d.(DataRanger); ok {
 			xmin, xmax, ymin, ymax := x.DataRange()
@@ -195,64 +202,66 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 	p.X.sanitizeRange()
 	p.Y.sanitizeRange()
 
-	ICX := func(lx vg.Length) float64 {
-		return float64((lx - c.Min.X) / (c.Max.X - c.Min.X))
-	}
-	ICY := func(ly vg.Length) float64 {
-		return float64((ly - c.Min.Y) / (c.Max.Y - c.Min.Y))
+	if p.AxisRange.RelExpansion > 0 {
+		// TODO: How to expand a non-linear axis?
+		dx := p.AxisRange.RelExpansion * (p.X.Max - p.X.Min)
+		dy := p.AxisRange.RelExpansion * (p.Y.Max - p.Y.Min)
+		p.X.Min -= dx
+		p.Y.Min -= dy
+		p.X.Max += dx
+		p.Y.Max += dy
 	}
 
-	xmin, xmax := p.X.Min, p.X.Max
-	ymin, ymax := p.Y.Min, p.Y.Max
-	// fmt.Printf("Original  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
-	for _, d := range p.plotters {
-		gb, ok := d.(GlyphBoxer)
-		if !ok {
-			continue
+	// TODO: Replace this iterative and deadly slow version with a one-shot
+	// version. Somae math will help; this is a simple series.
+	for iteration := 0; iteration < 10; iteration++ {
+		ICX := func(lx vg.Length) float64 {
+			return float64((lx - c.Min.X) / (c.Max.X - c.Min.X))
 		}
-		glyphs := gb.GlyphBoxes(p)
+		ICY := func(ly vg.Length) float64 {
+			return float64((ly - c.Min.Y) / (c.Max.Y - c.Min.Y))
+		}
+		xmin, xmax := p.X.Min, p.X.Max
+		ymin, ymax := p.Y.Min, p.Y.Max
+		fmt.Printf("%d X-Range %.8f %.8f Y-Range %.8f:%.8f\n",
+			iteration, xmin, xmax, ymin, ymax)
+		glyphs := []GlyphBox{}
+		for _, d := range p.plotters {
+			gb, ok := d.(GlyphBoxer)
+			if !ok {
+				continue
+			}
+			glyphs = append(glyphs, gb.GlyphBoxes(p)...)
+		}
 
 		l := leftMost(&c, glyphs)
-		lx := c.X(l.X) + l.Min.X
-		if lx < 0 {
+		lx := c.X(l.X) + l.Min.X - p.AxisRange.AbsExpansion
+		if lx < c.Min.X {
 			xmin = p.X.InvNorm(ICX(lx))
 		}
 
 		r := rightMost(&c, glyphs)
-		rx := c.X(r.X) + r.Min.X + r.Size().X
-		if rx > 1 {
+		rx := c.X(r.X) + r.Min.X + r.Size().X + p.AxisRange.AbsExpansion
+		if rx > c.Max.X {
 			xmax = p.X.InvNorm(ICX(rx))
 		}
 
 		b := bottomMost(&c, glyphs)
-		by := c.Y(b.Y) + b.Min.Y
-		if by < 0 {
+		by := c.Y(b.Y) + b.Min.Y - p.AxisRange.AbsExpansion
+		if by < c.Min.Y {
 			ymin = p.Y.InvNorm(ICY(by))
 		}
 
 		t := topMost(&c, glyphs)
-		ty := c.Y(t.Y) + t.Min.Y + t.Size().Y
-		if ty > 1 {
+		ty := c.Y(t.Y) + t.Min.Y + t.Size().Y + p.AxisRange.AbsExpansion
+		if ty > c.Max.Y {
 			ymax = p.Y.InvNorm(ICY(ty))
 		}
-		// TODO: top and bottom
+		p.X.Min, p.X.Max = xmin, xmax
+		p.Y.Min, p.Y.Max = ymin, ymax
 	}
-	// fmt.Printf("GlyphCor  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
-
-	// TODO: Do rel expansion before glyph expansion too?
-	if p.AxisRange.RelExpansion > 0 {
-		dx := p.AxisRange.RelExpansion * (xmax - xmin)
-		dy := p.AxisRange.RelExpansion * (ymax - ymin)
-		xmin -= dx
-		ymin -= dy
-		xmax += dx
-		ymax += dy
-	}
-	// fmt.Printf("Expanded  X-Range = [%.2f:%.2f]    Y-Range = [%.2f:%.2f]\n", xmin, xmax, ymin, ymax)
-	// TODO: absolute expansion
-
-	p.X.Min, p.X.Max = xmin, xmax
-	p.Y.Min, p.Y.Max = ymin, ymax
+	fmt.Printf("10 X-Range %.8f %.8f Y-Range %.8f %.8f\n",
+		p.X.Min, p.X.Max, p.Y.Min, p.Y.Max)
 }
 
 // DataCanvas returns a new draw.Canvas that

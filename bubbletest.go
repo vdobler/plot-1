@@ -29,11 +29,10 @@ func main() {
 	}
 	p.Add(&grid)
 
-	xyz := make(plotter.XYZs, 4)
-	xyz[0].X, xyz[0].Y, xyz[0].Z = 2, 5, 2
-	xyz[1].X, xyz[1].Y, xyz[1].Z = 2.1, 2.1, 10
-	xyz[2].X, xyz[2].Y, xyz[2].Z = 8.9, 8.9, 10
-	xyz[3].X, xyz[3].Y, xyz[3].Z = 9, 5, 2
+	xyz := make(plotter.XYZs, 3)
+	xyz[0].X, xyz[0].Y, xyz[0].Z = 2, 2, 10
+	xyz[1].X, xyz[1].Y, xyz[1].Z = 3, 3, 1
+	xyz[2].X, xyz[2].Y, xyz[2].Z = 4, 4, 10
 	b, err := plotter.NewBubbles(xyz, 2*vg.Millimeter, 20*vg.Millimeter)
 	if err != nil {
 		panic(err)
