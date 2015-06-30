@@ -162,6 +162,18 @@ func makeAxis() (Axis, error) {
 	return a, nil
 }
 
+// updateRange expands a's Min and Max according to min and max under
+// consideration of the autorange constraints
+func (a *Axis) updateRange(min, max float64) {
+	min = math.Min(min, a.Min)
+	min = math.Max(min, a.Constraint.Min.Higher)
+	a.Min = math.Min(min, a.Constraint.Min.Lower)
+
+	max = math.Max(max, a.Max)
+	max = math.Max(max, a.Constraint.Max.Higher)
+	a.Max = math.Min(max, a.Constraint.Max.Lower)
+}
+
 // sanitizeRange ensures that the range of the
 // axis makes sense.
 func (a *Axis) sanitizeRange() {

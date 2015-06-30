@@ -26,6 +26,9 @@ func main() {
 	p.X.Constraint.Min.Higher = -35
 	p.X.Constraint.Min.Lower = -25
 
+	p.X.Constraint.Max.Higher = 42.5
+	p.X.Constraint.Max.Lower = 42.5
+
 	p.Y.Constraint.Min.Lower = 3.8
 	p.Y.Constraint.Max.Higher = 4.1
 

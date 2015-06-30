@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"image/color"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,23 +137,9 @@ func (p *Plot) Add(ps ...Plotter) {
 			xmin, xmax, ymin, ymax := x.DataRange()
 			fmt.Printf("Data-X-Range:  %.3f - %.3f\n", xmin, xmax)
 			fmt.Printf("Data-Y-Range:  %.3f - %.3f\n", ymin, ymax)
-			// TODO: this should be a method of Axis
-			xmin = math.Min(xmin, p.X.Min)
-			xmin = math.Max(xmin, p.X.Constraint.Min.Higher)
-			p.X.Min = math.Min(xmin, p.X.Constraint.Min.Lower)
 
-			xmax = math.Max(xmax, p.X.Max)
-			xmax = math.Max(xmax, p.X.Constraint.Max.Higher)
-			p.X.Max = math.Min(xmax, p.X.Constraint.Max.Lower)
-
-			ymin = math.Min(ymin, p.Y.Min)
-			ymin = math.Max(ymin, p.Y.Constraint.Min.Higher)
-			p.Y.Min = math.Min(ymin, p.Y.Constraint.Min.Lower)
-
-			ymax = math.Max(ymax, p.Y.Max)
-			ymax = math.Max(ymax, p.Y.Constraint.Max.Higher)
-			p.Y.Max = math.Min(ymax, p.Y.Constraint.Max.Lower)
-
+			p.X.updateRange(xmin, xmax)
+			p.Y.updateRange(ymin, ymax)
 		}
 	}
 
