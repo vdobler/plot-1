@@ -206,6 +206,8 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 
 	// TODO: Replace this iterative and deadly slow version with a one-shot
 	// version. Somae math will help; this is a simple series.
+	xminOrig, xmaxOrig := p.X.Min, p.X.Max
+	yminOrig, ymaxOrig := p.Y.Min, p.Y.Max
 	for iteration := 0; iteration < 10; iteration++ {
 		ICX := func(lx vg.Length) float64 {
 			return float64((lx - c.Min.X) / (c.Max.X - c.Min.X))
@@ -249,6 +251,16 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 		}
 		p.X.Min, p.X.Max = xmin, xmax
 		p.Y.Min, p.Y.Max = ymin, ymax
+	}
+
+	if xminOrig != p.X.Min || xmaxOrig != p.X.Max {
+		fmt.Printf("Expanded X-Range from %.4f - %.4f to %.4f - %.4f\n",
+			xminOrig, xmaxOrig, p.X.Min, p.X.Max)
+	}
+
+	if yminOrig != p.Y.Min || ymaxOrig != p.Y.Max {
+		fmt.Printf("Expanded Y-Range from %.4f - %.4f to %.4f - %.4f\n",
+			yminOrig, ymaxOrig, p.Y.Min, p.Y.Max)
 	}
 
 	// TODO: handle constrained autoscaling.

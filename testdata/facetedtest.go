@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"math/rand"
 	"os"
 
@@ -13,13 +14,20 @@ import (
 	"github.com/gonum/plot/vg/vgimg"
 )
 
+var (
+	sameX = flag.Bool("same.x", false, "use same x-range fo all facets")
+	sameY = flag.Bool("same.y", false, "use same y-range fo all facets")
+)
+
 func main() {
+	flag.Parse()
+
 	fp, err := plot.NewFacetedPlot([]string{"AB", "CD", "EF"}, []string{"Gamma", "Delta"})
 	if err != nil {
 		panic(err)
 	}
-	fp.SameX = true
-	fp.SameY = true
+	fp.SameX = *sameX
+	fp.SameY = *sameY
 	fp.Plots[0][0].Title.Text = "Example Faceted Plot"
 	fp.Plots[0][0].X.Label.Text = "X-Axis Label"
 	fp.Plots[0][0].Y.Label.Text = "Y-Axis Label"

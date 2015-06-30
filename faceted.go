@@ -279,7 +279,8 @@ func (f *FacetedPlot) trainAxis(canvas draw.Canvas) {
 	rows, cols := len(f.RowLabels), len(f.ColLabels)
 
 	for r := 0; r < rows; r++ {
-		for c := 1; c < cols; c++ {
+		for c := 0; c < cols; c++ {
+			fmt.Printf("Training axis of facet (%d,%d)\n", c, r)
 			f.Plots[c][r].trainAxis(canvas)
 		}
 	}
