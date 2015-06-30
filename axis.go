@@ -58,6 +58,18 @@ type Axis struct {
 	// on the axis, thus making it easier to see.
 	Padding vg.Length
 
+	Expansion struct {
+		// Relative is the expansion of the axis at each end
+		// relative to the actual data range of the axis.
+		// This expansion is done before expanding the axis to
+		// accomodate all glyphs and the Absolute expansion
+		Relative float64
+
+		// Absolute is the minimal distance between the glyphs and
+		// the end of the axis.
+		Absolute vg.Length
+	}
+
 	Tick struct {
 		// Label is the TextStyle on the tick labels.
 		Label draw.TextStyle
@@ -119,6 +131,9 @@ func makeAxis() (Axis, error) {
 		Color: color.Black,
 		Width: vg.Points(0.5),
 	}
+	a.Expansion.Relative = 0.05
+	a.Expansion.Absolute = 0.5 * vg.Millimeter
+
 	a.Tick.Length = vg.Points(8)
 	a.Tick.Marker = DefaultTicks{}
 

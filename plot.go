@@ -64,18 +64,6 @@ type Plot struct {
 	// Legend is the plot's legend.
 	Legend Legend
 
-	AxisRange struct {
-		// RelExpansion is the expansion of the axis at each end
-		// relative to the actual data range of the axis.
-		// This expansion is done before expanding the axis to
-		// accomodate all glyphs and the AbsExpansion
-		RelExpansion float64
-
-		// AbsExpansion will exapnd the axis so that each glyph
-		// has at least AbsExpansion distance from the plot border.
-		AbsExpansion vg.Length
-	}
-
 	// plotters are drawn by calling their Plot method
 	// after the axes are drawn.
 	plotters []Plotter
@@ -132,8 +120,6 @@ func New() (*Plot, error) {
 		Color: color.Black,
 		Font:  titleFont,
 	}
-	p.AxisRange.RelExpansion = 0.05
-	p.AxisRange.AbsExpansion = 1 * vg.Millimeter
 	return p, nil
 }
 
@@ -202,10 +188,10 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 	p.X.sanitizeRange()
 	p.Y.sanitizeRange()
 
-	if p.AxisRange.RelExpansion > 0 {
+	if p.X.Expansion.Relative > 0 {
 		// TODO: How to expand a non-linear axis?
-		dx := p.AxisRange.RelExpansion * (p.X.Max - p.X.Min)
-		dy := p.AxisRange.RelExpansion * (p.Y.Max - p.Y.Min)
+		dx := p.X.Expansion.Relative * (p.X.Max - p.X.Min)
+		dy := p.Y.Expansion.Relative * (p.Y.Max - p.Y.Min)
 		p.X.Min -= dx
 		p.Y.Min -= dy
 		p.X.Max += dx
@@ -233,25 +219,25 @@ func (p *Plot) trainAxis(c draw.Canvas) {
 		}
 
 		l := leftMost(&c, glyphs)
-		lx := c.X(l.X) + l.Min.X - p.AxisRange.AbsExpansion
+		lx := c.X(l.X) + l.Min.X - p.X.Expansion.Absolute
 		if lx < c.Min.X {
 			xmin = p.X.InvNorm(ICX(lx))
 		}
 
 		r := rightMost(&c, glyphs)
-		rx := c.X(r.X) + r.Min.X + r.Size().X + p.AxisRange.AbsExpansion
+		rx := c.X(r.X) + r.Min.X + r.Size().X + p.X.Expansion.Absolute
 		if rx > c.Max.X {
 			xmax = p.X.InvNorm(ICX(rx))
 		}
 
 		b := bottomMost(&c, glyphs)
-		by := c.Y(b.Y) + b.Min.Y - p.AxisRange.AbsExpansion
+		by := c.Y(b.Y) + b.Min.Y - p.Y.Expansion.Absolute
 		if by < c.Min.Y {
 			ymin = p.Y.InvNorm(ICY(by))
 		}
 
 		t := topMost(&c, glyphs)
-		ty := c.Y(t.Y) + t.Min.Y + t.Size().Y + p.AxisRange.AbsExpansion
+		ty := c.Y(t.Y) + t.Min.Y + t.Size().Y + p.Y.Expansion.Absolute
 		if ty > c.Max.Y {
 			ymax = p.Y.InvNorm(ICY(ty))
 		}
