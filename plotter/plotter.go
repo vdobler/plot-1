@@ -210,6 +210,50 @@ func CopyXYZs(data XYZer) (XYZs, error) {
 	return cpy, nil
 }
 
+// XYZWer wraps the Len and XYZW methods.
+type XYZWer interface {
+	// Len returns the number of x, y, z, w quadrupels.
+	Len() int
+
+	// XYZW returns an x, y, z triple.
+	XYZW(int) (float64, float64, float64, float64)
+}
+
+// XYZWs implements the XYZWer interface using a slice.
+type XYZWs []struct{ X, Y, Z, W float64 }
+
+// Len implements the Len method of the XYZWer interface.
+func (xyzw XYZWs) Len() int {
+	return len(xyzw)
+}
+
+// XYZW implements the XYZW method of the XYZWer interface.
+func (xyzw XYZWs) XYZW(i int) (float64, float64, float64, float64) {
+	return xyzw[i].X, xyzw[i].Y, xyzw[i].Z, xyzw[i].W
+}
+
+// XYZ implements the XYZ method of the XYZer interface.
+func (xyzw XYZWs) XYZ(i int) (float64, float64, float64) {
+	return xyzw[i].X, xyzw[i].Y, xyzw[i].Z
+}
+
+// XY implements the XY method of the XYer interface.
+func (xyzw XYZWs) XY(i int) (float64, float64) {
+	return xyzw[i].X, xyzw[i].Y
+}
+
+// CopyXYZWs copies an XYZWer.
+func CopyXYZWs(data XYZWer) (XYZWs, error) {
+	cpy := make(XYZWs, data.Len())
+	for i := range cpy {
+		cpy[i].X, cpy[i].Y, cpy[i].Z, cpy[i].W = data.XYZW(i)
+		if err := CheckFloats(cpy[i].X, cpy[i].Y, cpy[i].Z, cpy[i].W); err != nil {
+			return nil, err
+		}
+	}
+	return cpy, nil
+}
+
 // XYValues implements the XYer interface, returning
 // the x and y values from an XYZer.
 type XYValues struct{ XYZer }

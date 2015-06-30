@@ -158,16 +158,11 @@ func (p *Plot) Draw(c draw.Canvas) {
 		c.SetColor(p.BackgroundColor)
 		c.Fill(c.Rectangle.Path())
 	}
-	fmt.Printf("Draw %p %q %v\n", p, p.Title.Text, c.Rectangle)
 	if p.Title.Text != "" {
-		fmt.Printf("Title drawn at %v x %v\n", c.Center().X, c.Max.Y)
 		c.FillText(p.Title.TextStyle, c.Center().X, c.Max.Y, -0.5, -1, p.Title.Text)
 		c.Max.Y -= p.Title.Height(p.Title.Text) - p.Title.Font.Extents().Descent
 		c.Max.Y -= p.Title.Padding
 	}
-
-	fmt.Printf("X-Range:  %.3f - %.3f\n", p.X.Min, p.X.Max)
-	fmt.Printf("Y-Range:  %.3f - %.3f\n", p.Y.Min, p.Y.Max)
 
 	x, y := horizontalAxis{p.X}, verticalAxis{p.Y}
 	p.trainAxis(c.Crop(y.size(), x.size(), 0, 0))

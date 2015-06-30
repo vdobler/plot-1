@@ -5,7 +5,6 @@
 package plot
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	"strconv"
@@ -264,7 +263,6 @@ func (a *horizontalAxis) size() (h vg.Length) {
 
 // draw draws the axis along the lower edge of a draw.Canvas.
 func (a *horizontalAxis) draw(c draw.Canvas) {
-	println("horizontalAxis.draw")
 	y := c.Min.Y
 	if a.Label.Text != "" {
 		y -= a.Label.Font.Extents().Descent
@@ -273,7 +271,6 @@ func (a *horizontalAxis) draw(c draw.Canvas) {
 	}
 
 	marks := a.Tick.Marker.Ticks(a.Min, a.Max)
-	fmt.Printf("hor ticks: %v\n", marks)
 	for _, t := range marks {
 		x := c.X(a.Norm(t.Value))
 		if !c.ContainsX(x) || t.IsMinor() {
