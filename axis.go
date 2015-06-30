@@ -53,6 +53,27 @@ type Axis struct {
 	// LineStyle is the style of the axis line.
 	draw.LineStyle
 
+	// TODO: are Higher and Lower the proper terms? Move to own type?
+	Constraint struct {
+		// Min contains the constraints for the Min value of this axis.
+		Min struct {
+			// Higher and Lower are the lower and upper constriants
+			// of Min: Min will be higher than Higher and lower
+			// than lower. Setting Higher equal to Lower fixes
+			// the Min value of this axis.
+			Higher, Lower float64
+		}
+
+		// Max contains the constraints for the Max value of this axis.
+		Max struct {
+			// Higher and Lower are the lower and upper constriants
+			// of Max: Min will be higher than Higher and lower
+			// than lower. Setting Higher equal to Lower fixes
+			// the Max value of this axis.
+			Higher, Lower float64
+		}
+	}
+
 	Expansion struct {
 		// Relative is the expansion of the axis at each end
 		// relative to the actual data range of the axis.
@@ -113,6 +134,13 @@ func makeAxis() (Axis, error) {
 		},
 		Scale: LinearScale{},
 	}
+
+	// unconstrained autoscaling
+	a.Constraint.Min.Higher = math.Inf(-1)
+	a.Constraint.Min.Lower = math.Inf(1)
+	a.Constraint.Max.Higher = math.Inf(-1)
+	a.Constraint.Max.Lower = math.Inf(1)
+
 	a.Label.TextStyle = draw.TextStyle{
 		Color: color.Black,
 		Font:  labelFont,
