@@ -172,6 +172,8 @@ func (p *Plot) Draw(c draw.Canvas) {
 	x, y := horizontalAxis{p.X}, verticalAxis{p.Y}
 	p.trainAxis(c.Crop(y.size(), x.size(), 0, 0))
 	x, y = horizontalAxis{p.X}, verticalAxis{p.Y}
+	// TODO: repeat training? Expansion could trigger different
+	// ticks resulting in different height or width...
 	ywidth, xheight := y.size(), x.size()
 
 	x.draw(c.Crop(ywidth, 0, 0, 0))

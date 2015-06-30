@@ -15,7 +15,7 @@ import (
 
 // FacetedPlots collects several individual Plots into one facted plot.
 // The title, the x-axis label and the y-axis label are taken form the
-// plot in the grid position (0,0).
+// plot in the grid position (0,0). TODO: this is stupid.
 type FacetedPlot struct {
 	RowLabels, ColLabels []string
 	Plots                [][]*Plot
@@ -53,7 +53,6 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 	rows, cols := len(f.RowLabels), len(f.ColLabels)
 	f.mergeAxis()
 
-	fmt.Printf("AAA %.0f\n", canvas.Max.Y)
 	// Draw title and axis labels determined by plot at (0,0).
 	p00 := f.Plots[0][0]
 	if p00.Title.Text != "" {
@@ -61,7 +60,6 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 		canvas.Max.Y -= p00.Title.Height(p00.Title.Text) - p00.Title.Font.Extents().Descent
 		canvas.Max.Y -= p00.Title.Padding
 	}
-	fmt.Printf("BBB %.0f\n", canvas.Max.Y)
 	x := canvas.Min.X
 	if p00.Y.Label.Text != "" {
 		x += p00.Y.Label.Height(p00.Y.Label.Text)
@@ -82,6 +80,7 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 	}
 	canvas.Min.Y += y
 
+	// Determine each plot size and train axis.
 	ywidths, ymaxwidth := f.yAxisWidths()
 	xheights, xmaxheight := f.xAxisHeights()
 	rowLabelWidth := 5 * vg.Millimeter  // TODO: make configurable
@@ -89,14 +88,16 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 	gridSep := 2 * vg.Millimeter        // TODO: make configurable
 
 	fwidth := (canvas.Rectangle.Size().X - ymaxwidth - rowLabelWidth) / vg.Length(cols)
+	println("fwidth", fwidth)
 	fheight := (canvas.Rectangle.Size().Y - xmaxheight - colLabelHeight) / vg.Length(rows)
+	f.trainAxis(draw.NewCanvas(canvas, fwidth, fheight))
 
 	// Draw the axis.
 	for c := 0; c < cols; c++ {
 		plt := f.Plots[c][0]
-		minx := canvas.Min.X + ymaxwidth + vg.Length(c)*fwidth
-		maxx := minx + fwidth - gridSep
-		box := canvas.Crop(minx, xmaxheight-xheights[c], maxx-canvas.Max.X, 0)
+		pleft := ymaxwidth + vg.Length(c)*fwidth
+		pright := canvas.Size().X - pleft - fwidth + gridSep
+		box := canvas.Crop(pleft, xmaxheight-xheights[c], -pright, 0)
 		tmp := plt.Y
 		plt.HideY()
 		ha := horizontalAxis{plt.X}
@@ -105,9 +106,9 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 	}
 	for r := 0; r < rows; r++ {
 		plt := f.Plots[0][r]
-		miny := canvas.Min.Y + xmaxheight + vg.Length(r)*fheight
-		maxy := miny + fheight - gridSep
-		box := canvas.Crop(ymaxwidth-ywidths[r], miny, 0, maxy-canvas.Max.Y)
+		pbot := xmaxheight + vg.Length(r)*fheight
+		ptop := canvas.Size().Y - pbot - fheight + gridSep
+		box := canvas.Crop(ymaxwidth-ywidths[r], pbot, 0, -ptop)
 		tmp := plt.X
 		plt.HideX()
 		va := verticalAxis{plt.Y}
@@ -119,19 +120,16 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 
 	// Draw column and row labels.
 	miny, maxy := canvas.Max.Y-colLabelHeight, canvas.Max.Y
-	fmt.Printf("CCC %.0f  %0.f %0.f\n", canvas.Max.Y, miny, maxy)
 	for c := 0; c < cols; c++ {
 		minx := canvas.Min.X + vg.Length(c)*fwidth
 		maxx := minx + fwidth - gridSep
 		fmt.Println(minx, canvas.Max.Y-colLabelHeight, maxx-canvas.Max.X, 0)
-		fmt.Printf("canvas = %v\n", canvas.Rectangle)
 		box := draw.Rectangle{
 			Min: draw.Point{X: minx, Y: miny},
 			Max: draw.Point{X: maxx, Y: maxy},
 		}
 		canvas.SetColor(color.Gray16{0xaaaa}) // TODO: make configurable
 		canvas.Fill(box.Path())
-		fmt.Printf("box = %v\n", box)
 		canvas.FillText(p00.X.Label.TextStyle, (minx+maxx)/2, (miny+maxy)/2, -0.5, -0.5, f.ColLabels[c])
 	}
 	minx, maxx := canvas.Max.X-rowLabelWidth, canvas.Max.X
@@ -151,36 +149,33 @@ func (f *FacetedPlot) Draw(canvas draw.Canvas) {
 	}
 	canvas.Max.Y -= colLabelHeight
 	canvas.Max.X -= rowLabelWidth
-	fmt.Printf("DDD %.0f\n", canvas.Max.Y)
 
-	// Draw the plain plots (with all axis ant titles turned off).
+	// Draw the plain plots (with all axis and titles turned off).
 	for c := 0; c < cols; c++ {
 		for r := 0; r < rows; r++ {
 			println(c, r)
 			p := f.Plots[c][r]
 
-			minx := canvas.Min.X + vg.Length(c)*fwidth
-			miny := canvas.Min.Y + vg.Length(r)*fheight
-			maxx := minx + fwidth - gridSep
-			maxy := miny + fheight - gridSep
-			pc := canvas.Crop(minx, miny, maxx-canvas.Max.X, maxy-canvas.Max.Y)
+			minx := vg.Length(c) * fwidth
+			miny := vg.Length(r) * fheight
+			maxx := canvas.Size().X - minx - fwidth + gridSep
+			maxy := canvas.Size().Y - miny - fheight + gridSep
+			pc := canvas.Crop(minx, miny, -maxx, -maxy)
 			p.BackgroundColor = nil
 			p.drawBackground(pc)
-			p.Title.Text = ""
-			p.HideAxes()
-			p.Draw(pc)
+			for _, data := range p.plotters {
+				data.Plot(pc, p)
+			}
+
 		}
 	}
 }
 
 func (p *Plot) drawBackground(c draw.Canvas) {
 	trX, trY := p.Transforms(&c)
-	bg := draw.Rectangle{
-		Min: draw.Point{X: trX(p.X.Min), Y: trY(p.Y.Min)},
-		Max: draw.Point{X: trX(p.X.Max), Y: trY(p.Y.Max)},
-	}
+
 	c.SetColor(color.Gray16{0xeeee}) // TODO: make configurable
-	c.Fill(bg.Path())
+	c.Fill(c.Rectangle.Path())
 
 	gls := draw.LineStyle{
 		Color: color.White,
@@ -275,6 +270,20 @@ func (f *FacetedPlot) mergeAxis() {
 			}
 		}
 	}
+}
+
+// trainAxis expands the axis so that the glyphs fit.
+// Each axis of each plot is trained individualy and the axis are
+// merged again.
+func (f *FacetedPlot) trainAxis(canvas draw.Canvas) {
+	rows, cols := len(f.RowLabels), len(f.ColLabels)
+
+	for r := 0; r < rows; r++ {
+		for c := 1; c < cols; c++ {
+			f.Plots[c][r].trainAxis(canvas)
+		}
+	}
+	f.mergeAxis()
 }
 
 func (f *FacetedPlot) yAxisWidths() (width []vg.Length, max vg.Length) {
