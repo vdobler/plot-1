@@ -53,11 +53,6 @@ type Axis struct {
 	// LineStyle is the style of the axis line.
 	draw.LineStyle
 
-	// Padding between the axis line and the data.  Having
-	// non-zero padding ensures that the data is never drawn
-	// on the axis, thus making it easier to see.
-	Padding vg.Length
-
 	Expansion struct {
 		// Relative is the expansion of the axis at each end
 		// relative to the actual data range of the axis.
@@ -116,8 +111,7 @@ func makeAxis() (Axis, error) {
 			Color: color.Black,
 			Width: vg.Points(0.5),
 		},
-		Padding: vg.Points(5),
-		Scale:   LinearScale{},
+		Scale: LinearScale{},
 	}
 	a.Label.TextStyle = draw.TextStyle{
 		Color: color.Black,
@@ -224,7 +218,6 @@ func (a *horizontalAxis) size() (h vg.Length) {
 		h += tickLabelHeight(a.Tick.Label, marks)
 	}
 	h += a.Width / 2
-	h += a.Padding
 	return
 }
 
@@ -305,7 +298,6 @@ func (a *verticalAxis) size() (w vg.Length) {
 		}
 	}
 	w += a.Width / 2
-	w += a.Padding
 	return
 }
 

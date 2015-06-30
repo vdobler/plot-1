@@ -20,7 +20,6 @@ func main() {
 	p.Title.Text = "Bubbles"
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
-	p.X.Padding, p.Y.Padding = 0, 0
 	p.BackgroundColor = color.Gray16{0xdddd}
 
 	grid := plotter.Grid{
