@@ -5,9 +5,11 @@
 package plot
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/gonum/floats"
 	"github.com/gonum/plot/vg"
@@ -17,10 +19,10 @@ import (
 // displayPrecision is a sane level of float precision for a plot.
 const displayPrecision = 4
 
-// Ticker creates Ticks in a specified range
+// Ticker creates Ticks for an Axis.
 type Ticker interface {
-	// Ticks returns Ticks in a specified range
-	Ticks(min, max float64) []Tick
+	// Ticks returns Ticks for the Axis a.
+	Ticks(a Axis) []Tick
 }
 
 // Normalizer rescales values from the data coordinate system to the
@@ -104,6 +106,12 @@ type Axis struct {
 		Marker Ticker
 	}
 
+	// ReferenceTime is the time instance represented by the float64 0.
+	// A non-zero value for ReferenceTime makes this Axis a date/time axis.
+	// All floats on such a date/time axis are interpreted as seconds
+	// past this ReferenceTime.
+	ReferenceTime time.Time
+
 	// Scale transforms a value given in the data coordinate system
 	// to the normalized coordinate system of the axis—its distance
 	// along the axis as a fraction of the axis range.
@@ -160,6 +168,17 @@ func makeAxis() (Axis, error) {
 	a.Tick.Marker = DefaultTicks{}
 
 	return a, nil
+}
+
+// TimeToFLoat returns the time difference of t and a's ReferenceTime in
+// seconds.
+func (a *Axis) TimeToFloat(t time.Time) float64 {
+	d := t.Sub(a.ReferenceTime)
+	return d.Seconds()
+}
+
+func (a *Axis) FloatToTime(f float64) time.Time {
+	return a.ReferenceTime.Add(time.Duration(f * 1e9))
 }
 
 // updateRange expands a's Min and Max according to min and max under
@@ -239,6 +258,9 @@ func (a *Axis) drawTicks() bool {
 	return a.Tick.Width > 0 && a.Tick.Length > 0
 }
 
+// ----------------------------------------------------------------------------
+// Horozontal and Vertical Axis
+
 // A horizontalAxis draws horizontally across the bottom
 // of a plot.
 type horizontalAxis struct {
@@ -251,7 +273,7 @@ func (a *horizontalAxis) size() (h vg.Length) {
 		h -= a.Label.Font.Extents().Descent
 		h += a.Label.Height(a.Label.Text)
 	}
-	if marks := a.Tick.Marker.Ticks(a.Min, a.Max); len(marks) > 0 {
+	if marks := a.Tick.Marker.Ticks(a.Axis); len(marks) > 0 {
 		if a.drawTicks() {
 			h += a.Tick.Length
 		}
@@ -270,7 +292,7 @@ func (a *horizontalAxis) draw(c draw.Canvas) {
 		y += a.Label.Height(a.Label.Text)
 	}
 
-	marks := a.Tick.Marker.Ticks(a.Min, a.Max)
+	marks := a.Tick.Marker.Ticks(a.Axis)
 	for _, t := range marks {
 		x := c.X(a.Norm(t.Value))
 		if !c.ContainsX(x) || t.IsMinor() {
@@ -303,7 +325,7 @@ func (a *horizontalAxis) draw(c draw.Canvas) {
 
 // GlyphBoxes returns the GlyphBoxes for the tick labels.
 func (a *horizontalAxis) GlyphBoxes(*Plot) (boxes []GlyphBox) {
-	for _, t := range a.Tick.Marker.Ticks(a.Min, a.Max) {
+	for _, t := range a.Tick.Marker.Ticks(a.Axis) {
 		if t.IsMinor() {
 			continue
 		}
@@ -328,7 +350,7 @@ func (a *verticalAxis) size() (w vg.Length) {
 		w -= a.Label.Font.Extents().Descent
 		w += a.Label.Height(a.Label.Text)
 	}
-	if marks := a.Tick.Marker.Ticks(a.Min, a.Max); len(marks) > 0 {
+	if marks := a.Tick.Marker.Ticks(a.Axis); len(marks) > 0 {
 		if lwidth := tickLabelWidth(a.Tick.Label, marks); lwidth > 0 {
 			w += lwidth
 			w += a.Label.Width(" ")
@@ -352,7 +374,7 @@ func (a *verticalAxis) draw(c draw.Canvas) {
 		c.Pop()
 		x += -a.Label.Font.Extents().Descent
 	}
-	marks := a.Tick.Marker.Ticks(a.Min, a.Max)
+	marks := a.Tick.Marker.Ticks(a.Axis)
 	if w := tickLabelWidth(a.Tick.Label, marks); len(marks) > 0 && w > 0 {
 		x += w
 	}
@@ -385,7 +407,7 @@ func (a *verticalAxis) draw(c draw.Canvas) {
 
 // GlyphBoxes returns the GlyphBoxes for the tick labels
 func (a *verticalAxis) GlyphBoxes(*Plot) (boxes []GlyphBox) {
-	for _, t := range a.Tick.Marker.Ticks(a.Min, a.Max) {
+	for _, t := range a.Tick.Marker.Ticks(a.Axis) {
 		if t.IsMinor() {
 			continue
 		}
@@ -399,6 +421,9 @@ func (a *verticalAxis) GlyphBoxes(*Plot) (boxes []GlyphBox) {
 	return
 }
 
+// ----------------------------------------------------------------------------
+// Ticker Implementations
+
 // DefaultTicks is suitable for the Tick.Marker field of an Axis,
 // it returns a resonable default set of tick marks.
 type DefaultTicks struct{}
@@ -406,7 +431,8 @@ type DefaultTicks struct{}
 var _ Ticker = DefaultTicks{}
 
 // Ticks returns Ticks in a specified range
-func (DefaultTicks) Ticks(min, max float64) (ticks []Tick) {
+func (DefaultTicks) Ticks(a Axis) (ticks []Tick) {
+	min, max := a.Min, a.Max
 	const SuggestedTicks = 3
 	if max < min {
 		panic("illegal range")
@@ -472,7 +498,8 @@ type LogTicks struct{}
 var _ Ticker = LogTicks{}
 
 // Ticks returns Ticks in a specified range
-func (LogTicks) Ticks(min, max float64) []Tick {
+func (LogTicks) Ticks(a Axis) []Tick {
+	min, max := a.Min, a.Max
 	var ticks []Tick
 	val := math.Pow10(int(math.Floor(math.Log10(min))))
 	if min <= 0 {
@@ -501,9 +528,99 @@ type ConstantTicks []Tick
 var _ Ticker = ConstantTicks{}
 
 // Ticks returns Ticks in a specified range
-func (ts ConstantTicks) Ticks(float64, float64) []Tick {
+func (ts ConstantTicks) Ticks(_ Axis) []Tick {
 	return ts
 }
+
+// DateTimeTicks is suitable for the Tick.Marker field of an date/time Axis.
+type DateTimeTicks struct {
+	// Format is the optional time format layout. A zero Format
+	// will use a sensible default.
+	Format string
+}
+
+var _ Ticker = DateTimeTicks{}
+
+// timeDelta represent the details of a major time tick
+type timeDelta struct {
+	cnt    int
+	unit   time.Duration
+	format string
+}
+
+// timeDeltas constins suitable date/time axis tick spacings.
+// TODO: think about it much more.
+var timeDeltas = []timeDelta{
+	{1, time.Second, "05"},
+	{2, time.Second, "05"},
+	{5, time.Second, "05"},
+	{10, time.Second, "05"},
+	{20, time.Second, "05"},
+	{30, time.Second, "05"},
+	{1, time.Minute, "04:00"},
+	{2, time.Minute, "04:00"},
+	{5, time.Minute, "04:00"},
+	{10, time.Minute, "04:00"},
+	{15, time.Minute, "04:00"},
+	{20, time.Minute, "04:00"},
+	{30, time.Minute, "04:00"},
+	{1, time.Hour, "15:04:00"},
+	{2, time.Hour, "15:04:00"},
+	{3, time.Hour, "15:04:00"},
+	{4, time.Hour, "15:04:00"},
+	{6, time.Hour, "15:04:00"},
+	{12, time.Hour, "15:04:00"},
+	{1, 24 * time.Hour, "02.01"},
+	{2, 24 * time.Hour, "02.01"},
+	{7, 24 * time.Hour, "02.01"},
+	{1, 30 * 24 * time.Hour, "02.01.06"},
+	{2, 30 * 24 * time.Hour, "02.01.06"},
+	{3, 30 * 24 * time.Hour, "02.01.06"},
+	{6, 30 * 24 * time.Hour, "02.01.06"},
+	{1, 365 * 24 * time.Hour, "2006"},
+	{2, 365 * 24 * time.Hour, "2006"},
+	{5, 365 * 24 * time.Hour, "2006"},
+	{10, 365 * 24 * time.Hour, "2006"},
+	{20, 365 * 24 * time.Hour, "2006"},
+	{50, 365 * 24 * time.Hour, "2006"},
+	{100, 365 * 24 * time.Hour, "2006"},
+}
+
+// Ticks returns Ticks in a specified range
+func (tt DateTimeTicks) Ticks(a Axis) (ticks []Tick) {
+	rng := a.Max - a.Min
+	var i, cnt, noTicks int
+	var unit, delta time.Duration
+	var format string
+	noTicks = 100
+	for i < len(timeDeltas) && noTicks >= 7 {
+		cnt = timeDeltas[i].cnt
+		unit = timeDeltas[i].unit
+		delta = time.Duration(cnt) * unit
+		noTicks = int(rng/delta.Seconds()) + 1
+		format = timeDeltas[i].format
+		i++
+	}
+
+	ticks = make([]Tick, noTicks)
+	t := a.FloatToTime(a.Min).Add(unit / 2).Round(unit)
+	fmt.Printf("Ticks for Axis %q with delta = %s\n", a.Label.Text, delta)
+	for i := range ticks {
+		ticks[i].Value = a.TimeToFloat(t)
+		ticks[i].Label = t.Format(format)
+		fmt.Printf("  Tick no %d: %s = %q at %.0f\n",
+			i, t, ticks[i].Label, ticks[i].Value)
+		if i == 0 && delta < 24*time.Hour {
+			// TODO: limit okay? other formats?
+			ticks[i].Label += "\n" + t.Format("02.Jan.06")
+		}
+		t = t.Add(delta)
+	}
+	return ticks
+}
+
+// ----------------------------------------------------------------------------
+// Tick
 
 // A Tick is a single tick mark on an axis.
 type Tick struct {

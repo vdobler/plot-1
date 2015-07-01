@@ -182,7 +182,7 @@ func (p *Plot) drawBackground(c draw.Canvas) {
 		Width: 2,
 	}
 
-	for _, tk := range p.X.Tick.Marker.Ticks(p.X.Min, p.X.Max) {
+	for _, tk := range p.X.Tick.Marker.Ticks(p.X) {
 		if tk.IsMinor() {
 			continue
 		}
@@ -190,7 +190,7 @@ func (p *Plot) drawBackground(c draw.Canvas) {
 		c.StrokeLine2(gls, x, c.Min.Y, x, c.Min.Y+c.Size().Y)
 	}
 
-	for _, tk := range p.Y.Tick.Marker.Ticks(p.Y.Min, p.Y.Max) {
+	for _, tk := range p.Y.Tick.Marker.Ticks(p.Y) {
 		if tk.IsMinor() {
 			continue
 		}

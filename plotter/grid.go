@@ -46,7 +46,7 @@ func (g *Grid) Plot(c draw.Canvas, plt *plot.Plot) {
 	if g.Vertical.Color == nil {
 		goto horiz
 	}
-	for _, tk := range plt.X.Tick.Marker.Ticks(plt.X.Min, plt.X.Max) {
+	for _, tk := range plt.X.Tick.Marker.Ticks(plt.X) {
 		if tk.IsMinor() {
 			continue
 		}
@@ -58,7 +58,7 @@ horiz:
 	if g.Horizontal.Color == nil {
 		return
 	}
-	for _, tk := range plt.Y.Tick.Marker.Ticks(plt.Y.Min, plt.Y.Max) {
+	for _, tk := range plt.Y.Tick.Marker.Ticks(plt.Y) {
 		if tk.IsMinor() {
 			continue
 		}
