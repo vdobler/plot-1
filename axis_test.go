@@ -36,7 +36,8 @@ func TestAxisSmallTick(t *testing.T) {
 			Labels: []string{"4.8e+307", "5.2e+307", "5.6e+307"},
 		},
 	} {
-		ticks := d.Ticks(test.Min, test.Max)
+		a := Axis{Min: test.Min, Max: test.Max}
+		ticks := d.Ticks(a)
 		var count int
 		for _, tick := range ticks {
 			if tick.Label != "" {

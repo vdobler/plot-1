@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"image/color"
 	"time"
 
@@ -12,7 +13,15 @@ import (
 	"github.com/gonum/plot/vg/draw"
 )
 
+var (
+	ticks = flag.Int("ticks", 6, "Allow at most `ticks` major ticks")
+)
+
 func main() {
+
+	flag.Parse()
+	plot.DateTimeAxisMaxNoTicks = *ticks
+
 	p, err := plot.New()
 	if err != nil {
 		panic(err)

@@ -5,7 +5,6 @@
 package plot
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	"strconv"
@@ -540,84 +539,6 @@ type DateTimeTicks struct {
 }
 
 var _ Ticker = DateTimeTicks{}
-
-// timeDelta represent the details of a major time tick
-type timeDelta struct {
-	cnt    int
-	unit   time.Duration
-	format string
-}
-
-// timeDeltas constins suitable date/time axis tick spacings.
-// TODO: think about it much more.
-var timeDeltas = []timeDelta{
-	{1, time.Second, "05"},
-	{2, time.Second, "05"},
-	{5, time.Second, "05"},
-	{10, time.Second, "05"},
-	{20, time.Second, "05"},
-	{30, time.Second, "05"},
-	{1, time.Minute, "04:00"},
-	{2, time.Minute, "04:00"},
-	{5, time.Minute, "04:00"},
-	{10, time.Minute, "04:00"},
-	{15, time.Minute, "04:00"},
-	{20, time.Minute, "04:00"},
-	{30, time.Minute, "04:00"},
-	{1, time.Hour, "15:04:00"},
-	{2, time.Hour, "15:04:00"},
-	{3, time.Hour, "15:04:00"},
-	{4, time.Hour, "15:04:00"},
-	{6, time.Hour, "15:04:00"},
-	{12, time.Hour, "15:04:00"},
-	{1, 24 * time.Hour, "02.01"},
-	{2, 24 * time.Hour, "02.01"},
-	{7, 24 * time.Hour, "02.01"},
-	{1, 30 * 24 * time.Hour, "02.01.06"},
-	{2, 30 * 24 * time.Hour, "02.01.06"},
-	{3, 30 * 24 * time.Hour, "02.01.06"},
-	{6, 30 * 24 * time.Hour, "02.01.06"},
-	{1, 365 * 24 * time.Hour, "2006"},
-	{2, 365 * 24 * time.Hour, "2006"},
-	{5, 365 * 24 * time.Hour, "2006"},
-	{10, 365 * 24 * time.Hour, "2006"},
-	{20, 365 * 24 * time.Hour, "2006"},
-	{50, 365 * 24 * time.Hour, "2006"},
-	{100, 365 * 24 * time.Hour, "2006"},
-}
-
-// Ticks returns Ticks in a specified range
-func (tt DateTimeTicks) Ticks(a Axis) (ticks []Tick) {
-	rng := a.Max - a.Min
-	var i, cnt, noTicks int
-	var unit, delta time.Duration
-	var format string
-	noTicks = 100
-	for i < len(timeDeltas) && noTicks >= 7 {
-		cnt = timeDeltas[i].cnt
-		unit = timeDeltas[i].unit
-		delta = time.Duration(cnt) * unit
-		noTicks = int(rng/delta.Seconds()) + 1
-		format = timeDeltas[i].format
-		i++
-	}
-
-	ticks = make([]Tick, noTicks)
-	t := a.FloatToTime(a.Min).Add(unit / 2).Round(unit)
-	fmt.Printf("Ticks for Axis %q with delta = %s\n", a.Label.Text, delta)
-	for i := range ticks {
-		ticks[i].Value = a.TimeToFloat(t)
-		ticks[i].Label = t.Format(format)
-		fmt.Printf("  Tick no %d: %s = %q at %.0f\n",
-			i, t, ticks[i].Label, ticks[i].Value)
-		if i == 0 && delta < 24*time.Hour {
-			// TODO: limit okay? other formats?
-			ticks[i].Label += "\n" + t.Format("02.Jan.06")
-		}
-		t = t.Add(delta)
-	}
-	return ticks
-}
 
 // ----------------------------------------------------------------------------
 // Tick
