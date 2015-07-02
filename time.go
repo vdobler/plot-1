@@ -4,7 +4,11 @@
 
 package plot
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // interval is a time interval used during rounding dates/times.
 type interval int
@@ -65,7 +69,10 @@ func (d timeDelta) RoundDown(t time.Time) time.Time {
 		M = time.Month(round1(int(M), d.count))
 		D, h, m, s = 1, 0, 0, 0
 	case week:
-		panic("unimplemented")
+		weekday := t.Weekday()
+		monday := time.Date(Y, M, D-int(weekday)+1, 0, 0, 0, 0, t.Location())
+		fmt.Printf("week of  %s  ==  %s\n", t.Format(time.RFC1123Z), monday.Format(time.RFC1123Z))
+		return monday
 	case day:
 		D = round1(D, d.count)
 		h, m, s = 0, 0, 0
@@ -107,7 +114,7 @@ var timeDeltas = []timeDelta{
 	{6, hour, "15h", "2 Jan 2006", true, 3},
 	{12, hour, "15:04:00", "2 Jan 2006", true, 3},
 	{1, day, "02.01.", "2006", false, 4},
-	{1, week, "Week N", "2006", false, 7},
+	{1, week, "Week <WEEK>", "2.01.2006", false, 7}, // "<WEEK>" is magic value for week number.
 	{1, month, "Jan 2006", "", false, 2},
 	{2, month, "Jan 2006", "", false, 2},
 	{3, month, "Jan 2006", "", false, 3},
@@ -162,9 +169,12 @@ func (tt DateTimeTicks) Ticks(a Axis) (ticks []Tick) {
 
 		v = a.TimeToFloat(t)
 		if v >= a.Min && v <= a.Max { // Todo: slag
+			label := t.Format(delta.format)
+			_, week := t.ISOWeek()
+			label = strings.Replace(label, "<WEEK>", fmt.Sprintf("%d", week), -1)
 			tick := Tick{
 				Value: v,
-				Label: t.Format(delta.format),
+				Label: label,
 			}
 			if firstMajor && delta.first != "" {
 				// TODO: limit okay? other formats?
