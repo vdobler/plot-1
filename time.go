@@ -170,6 +170,9 @@ func (tt DateTimeTicks) Ticks(a Axis) (ticks []Tick) {
 				// TODO: limit okay? other formats?
 				tick.Label += "\n" + t.Format(delta.first)
 			}
+			if !delta.instant {
+				tick.Align = 0.5
+			}
 			ticks = append(ticks, tick)
 			firstMajor = false
 		}

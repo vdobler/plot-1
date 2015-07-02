@@ -437,7 +437,7 @@ func (p *Plot) NominalX(names ...string) {
 	// TODO: needs different axis training. Was p.Y.Padding = p.X.Tick.Label.Width(names[0]) / 2
 	ticks := make([]Tick, len(names))
 	for i, name := range names {
-		ticks[i] = Tick{float64(i), name}
+		ticks[i] = Tick{float64(i), name, 0}
 	}
 	p.X.Tick.Marker = ConstantTicks(ticks)
 }
@@ -470,7 +470,7 @@ func (p *Plot) NominalY(names ...string) {
 	// TODO: Needs different axis training. Was p.X.Padding = p.Y.Tick.Label.Height(names[0]) / 2
 	ticks := make([]Tick, len(names))
 	for i, name := range names {
-		ticks[i] = Tick{float64(i), name}
+		ticks[i] = Tick{float64(i), name, 0}
 	}
 	p.Y.Tick.Marker = ConstantTicks(ticks)
 }

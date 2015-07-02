@@ -297,7 +297,7 @@ func (a *horizontalAxis) draw(c draw.Canvas) {
 		if !c.ContainsX(x) || t.IsMinor() {
 			continue
 		}
-		c.FillText(a.Tick.Label, x, y, -0.5, 0, t.Label)
+		c.FillText(a.Tick.Label, x, y, t.Align-0.5, 0, t.Label)
 	}
 
 	if len(marks) > 0 {
@@ -383,7 +383,7 @@ func (a *verticalAxis) draw(c draw.Canvas) {
 		if !c.ContainsY(y) || t.IsMinor() {
 			continue
 		}
-		c.FillText(a.Tick.Label, x, y, -1, -0.5, t.Label)
+		c.FillText(a.Tick.Label, x, y, -1, t.Align-0.5, t.Label)
 		major = true
 	}
 	if major {
@@ -552,6 +552,11 @@ type Tick struct {
 	// If Label is an empty string then this is a minor
 	// tick mark.
 	Label string
+
+	// Align controls the horozontal alignments of lables on a x-axis
+	// and the vertical alignment of labels on a y.axis.
+	// A Value of 0 centers the label. TODO document left/right alignment.
+	Align float64
 }
 
 // IsMinor returns true if this is a minor tick mark.
