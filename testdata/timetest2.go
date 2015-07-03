@@ -4,13 +4,11 @@ package main
 
 import (
 	"flag"
-	"image/color"
 	"time"
 
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/vg"
-	"github.com/gonum/plot/vg/draw"
 )
 
 var (
@@ -33,7 +31,6 @@ func main() {
 	p.Title.Text = "Date/Time-Axis"
 	p.X.Label.Text = "Start"
 	p.Y.Label.Text = "End"
-	p.BackgroundColor = color.Gray16{0xdddd}
 
 	refTZ := time.FixedZone("Artificial", *zone)
 
@@ -42,11 +39,8 @@ func main() {
 	p.Y.ReferenceTime = p.X.ReferenceTime
 	p.Y.Tick.Marker = plot.DateTimeTicks{}
 
-	grid := plotter.Grid{
-		Vertical:   draw.LineStyle{Color: color.White, Width: 2},
-		Horizontal: draw.LineStyle{Color: color.White, Width: 2},
-	}
-	p.Add(&grid)
+	grid := plotter.NewGrid()
+	p.Add(grid)
 
 	t0 := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
 	t1 := t0.Add(time.Duration(*days) * 24 * time.Hour).Add(*hours)

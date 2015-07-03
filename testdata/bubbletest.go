@@ -3,12 +3,9 @@
 package main
 
 import (
-	"image/color"
-
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/vg"
-	"github.com/gonum/plot/vg/draw"
 )
 
 func main() {
@@ -20,13 +17,8 @@ func main() {
 	p.Title.Text = "Bubbles"
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
-	p.BackgroundColor = color.Gray16{0xdddd}
-
-	grid := plotter.Grid{
-		Vertical:   draw.LineStyle{Color: color.White, Width: 2},
-		Horizontal: draw.LineStyle{Color: color.White, Width: 2},
-	}
-	p.Add(&grid)
+	grid := plotter.NewGrid()
+	p.Add(grid)
 
 	xyz := make(plotter.XYZs, 3)
 	xyz[0].X, xyz[0].Y, xyz[0].Z = 2, 2, 10

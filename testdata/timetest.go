@@ -4,13 +4,11 @@ package main
 
 import (
 	"flag"
-	"image/color"
 	"time"
 
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/vg"
-	"github.com/gonum/plot/vg/draw"
 )
 
 var (
@@ -30,18 +28,15 @@ func main() {
 	p.Title.Text = "Date/Time-Axis"
 	p.X.Label.Text = "Start"
 	p.Y.Label.Text = "End"
-	p.BackgroundColor = color.Gray16{0xdddd}
+	// p.BackgroundColor = color.Gray16{0xdddd}
 
 	p.X.ReferenceTime = time.Date(2003, 5, 11, 23, 11, 9, 0, time.UTC)
 	p.X.Tick.Marker = plot.DateTimeTicks{}
 	p.Y.ReferenceTime = p.X.ReferenceTime
 	p.Y.Tick.Marker = plot.DateTimeTicks{}
 
-	grid := plotter.Grid{
-		Vertical:   draw.LineStyle{Color: color.White, Width: 2},
-		Horizontal: draw.LineStyle{Color: color.White, Width: 2},
-	}
-	p.Add(&grid)
+	grid := plotter.NewGrid()
+	p.Add(grid)
 
 	xy := make(plotter.XYs, 4)
 	xy[0].X = p.X.TimeToFloat(time.Date(2003, 5, 12, 8, 45, 17, 0, time.UTC))
